@@ -8,7 +8,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 def print_post_params(form):
     for key in form.keys():
-        print(key + " = " + form.getvalue(key))
+        print("\t" + key + " = " + form.getvalue(key))
 
 
 def format_response(response):
@@ -30,14 +30,15 @@ class Server(BaseHTTPRequestHandler):
         self._set_headers()
 
     def do_POST(self):
-        form = cgi.FieldStorage(
+        print("**** New POST request received ****")
+
+        params = cgi.FieldStorage(
             fp=self.rfile,
             headers=self.headers,
             environ={'REQUEST_METHOD': 'POST'}
         )
 
-        action = form.getvalue("action")
-        params = form
+        action = params.getvalue("action")
 
         if action == "register":
             self.action_register(params)
