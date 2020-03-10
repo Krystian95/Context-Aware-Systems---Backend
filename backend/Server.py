@@ -3,50 +3,70 @@
 import argparse
 import cgi
 import json
+import cgi
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from backend.Postgres import Postgres
 
 
-def print_post_params(form):
-    for key in form.keys():
-        print("\t" + key + " = " + form.getvalue(key))
+def format_response(response_json):
+    return json.dumps(response_json).encode(encoding='UTF-8')
 
-
-def format_response(response):
-    return str(response).encode("utf-8")
+def print_json(title, json_to_print):
+    print(title + " = " + json.dumps(json_to_print, indent=4))
 
 
 class Server(BaseHTTPRequestHandler):
 
     def _set_headers(self):
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        self.send_header('Content-type', 'application/json')
         self.end_headers()
-
-    def do_GET(self):
-        self._set_headers()
-        self.wfile.write(format_response(200))
 
     def do_HEAD(self):
         self._set_headers()
 
+    def do_GET(self):
+        self._set_headers()
+        self.wfile.write(json.dumps({'message': 'Hello world!'}))
+
     def do_POST(self):
-        print("**** New POST request received ****")
+        ctype, pdict = cgi.parse_header(self.headers.get('content-type'))
 
-        params = cgi.FieldStorage(
-            fp=self.rfile,
-            headers=self.headers,
-            environ={'REQUEST_METHOD': 'POST'}
-        )
+        # refuse to receive non-json content
+        if ctype != 'application/json':
+            self.send_response(400)
+            self.end_headers()
+            return
 
-        action = params.getvalue("action")
+        # read the message and convert it into a python dictionary
+        length = int(self.headers.get('content-length'))
+        message = json.loads(self.rfile.read(length))
 
-        if action == "register":
-            response = self.action_register(params)
-        elif action == "communicate-position":
-            response = self.action_communicate_position(params)
+        print("message = " + json.dumps(message, indent=4))
+        response = None
+
+        if "action" not in message:
+            response = {
+                "type": "Error",
+                "message": "Parameter 'action' not specified"
+            }
+            self.send_response(400)
+            self.end_headers()
         else:
-            print("Requested operation not recognized")
+            action = message['action']
+            if action == "register":
+                response = self.action_register(message)
+            elif action == "communicate-position":
+                response = self.action_communicate_position(message)
+            else:
+                response = {
+                    "type": "Error",
+                    "message": "Operation '" + action + "' not recognized"
+                }
+                self.send_response(400)
+                self.end_headers()
+
+        print_json("response", response)
 
         self._set_headers()
         self.wfile.write(format_response(response))
@@ -55,26 +75,22 @@ class Server(BaseHTTPRequestHandler):
     # Se esiste già ritorna l'id utente del rispettivo registration_token,
     # altrimenti crea una nuova entry nel db e ritorna il suo id.
     def action_register(self, params):
-        print_post_params(params)
 
         postgres = Postgres()
         postgres.make_sample_query()
 
         response = {
-            "result": True,
+            "result": "true",
             "user_id": "a4tvety5byrty5rs4e"
         }
-        print("response = " + json.dumps(response, indent=4))
-        return json.dumps(response)
+        return response
 
     # Salva nel db la entry che gli viene comunicata.
     def action_communicate_position(self, params):
-        print_post_params(params)
         response = {
-            "result": True
+            "result": "true"
         }
-        print("response = " + json.dumps(response, indent=4))
-        return json.dumps(response)
+        return response
 
 
 def run(server_class=HTTPServer, handler_class=Server, addr="localhost", port=8000):
