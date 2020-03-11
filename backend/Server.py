@@ -11,6 +11,7 @@ from backend.Postgres import Postgres
 def format_response(response_json):
     return json.dumps(response_json).encode(encoding='UTF-8')
 
+
 def print_json(title, json_to_print):
     print(title + " = " + json.dumps(json_to_print, indent=4))
 
@@ -65,6 +66,8 @@ class Server(BaseHTTPRequestHandler):
                 }
                 self.send_response(400)
                 self.end_headers()
+
+        response['message'] = "Position correctly received and saved"
 
         print_json("response", response)
 
