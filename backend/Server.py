@@ -7,6 +7,7 @@ import cgi
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from backend.Postgres import Postgres
 from backend.Firebase import Firebase
+from backend.User import User
 
 
 def format_response(response_json):
@@ -84,16 +85,12 @@ class Server(BaseHTTPRequestHandler):
     # Riceve il registration_token e verifica se esiste già nel db.
     # Se esiste già ritorna l'id utente del rispettivo registration_token,
     # altrimenti crea una nuova entry nel db e ritorna il suo id.
-    def action_register(self, params):
-
-        response = {
-            "result": True,
-            "user_id": "a4tvety5byrty5rs4e"
-        }
-        return response
+    def action_register(self, message):
+        user = User(self.postgres)
+        return user.register(message["registration_token"])
 
     # Salva nel db la entry che gli viene comunicata.
-    def action_communicate_position(self, params):
+    def action_communicate_position(self, message):
         response = {
             "result": True,
             'message': "Position correctly received and saved"
@@ -112,8 +109,7 @@ class Server(BaseHTTPRequestHandler):
     def test_query(self):
         self.postgres.do_sample_query()
         return {
-            "result": True,
-            'message': "Position correctly received and saved"
+            "result": True
         }
 
 
