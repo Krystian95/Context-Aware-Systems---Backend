@@ -1,6 +1,8 @@
 import psycopg2
 
 
+# Postgres class allows Python to connect to the Postgres server and
+# commit queries.
 class Postgres:
     conn = None
     cur = None
@@ -8,16 +10,18 @@ class Postgres:
     def __init__(self):
         # Database connection
         try:
-            self.conn = psycopg2.connect("dbname=cristian user=postgres")
+            self.conn = psycopg2.connect("dbname=db_llr user=postgres")
             # Open a cursor to perform database operations
             self.cur = self.conn.cursor()
+            print("Successfully connected to POSTGRES database")
+            # print(psycopg2)
         except:
-            print("ERROR connection to database")
+            print("ERROR connection to POSTGRES database")
 
     def check_user_exists(self, user_id):
         self.cursor.execute('SELECT * from table where id = %(user_id)d', {'user_id': user_id})
 
-    def make_sample_query(self):
+    def do_sample_query(self):
         self.cur.execute("SELECT * FROM test;")
         print(self.cur.fetchall())
 
