@@ -1,13 +1,13 @@
 # https://gist.github.com/bradmontgomery/2219997
 
 import argparse
-import cgi
 import json
 import cgi
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from backend.Postgres import Postgres
 from backend.Firebase import Firebase
 from backend.User import User
+from backend.Utils import Utils
 
 
 def format_response(response_json):
@@ -15,12 +15,14 @@ def format_response(response_json):
 
 
 def print_json(title, json_to_print):
-    print(title + " = " + json.dumps(json_to_print, indent=4))
+    print(title + ": " + json.dumps(json_to_print, indent=4))
 
 
 class Server(BaseHTTPRequestHandler):
     postgres = Postgres()
     firebase_sdk = Firebase()
+    user = User(postgres)
+    utils = Utils()
 
     def _set_headers(self):
         self.send_response(200)
@@ -48,16 +50,11 @@ class Server(BaseHTTPRequestHandler):
         message = json.loads(self.rfile.read(length))
 
         print("message = " + json.dumps(message, indent=4))
-        response = None
+        response = {}
 
-        if "action" not in message:
-            response = {
-                "result": False,
-                "type": "Error",
-                "message": "Parameter 'action' not specified"
-            }
-            self.send_response(400)
-            self.end_headers()
+        check_params = self.check_parameters_exists(message, ["action"])
+        if check_params is not True:
+            response = check_params
         else:
             action = message['action']
             if action == "register":
@@ -82,26 +79,31 @@ class Server(BaseHTTPRequestHandler):
         self._set_headers()
         self.wfile.write(format_response(response))
 
-    # Riceve il registration_token e verifica se esiste già nel db.
-    # Se esiste già ritorna l'id utente del rispettivo registration_token,
-    # altrimenti crea una nuova entry nel db e ritorna il suo id.
-    def action_register(self, message):
-        user = User(self.postgres)
-        return user.register(message["registration_token"])
+    def check_parameters_exists(self, params, params_needed):
+        check_params = self.utils.check_parameters_exists(params, params_needed)
+        if check_params is True:
+            return True
+        else:
+            self.send_response(400)
+            self.end_headers()
+            return check_params
 
-    # Salva nel db la entry che gli viene comunicata.
+    def action_register(self, message):
+        check_params = self.utils.check_parameters_exists(message, ["registration_token"])
+        if check_params is True:
+            return self.user.register(message["registration_token"])
+        else:
+            return check_params
+
     def action_communicate_position(self, message):
-        response = {
-            "result": True,
-            'message': "Position correctly received and saved"
-        }
-        return response
+        check_params = self.utils.check_parameters_exists(message, ["session_id", "longitude", "latitude", "activity"])
+        if check_params is True:
+            return self.user.communicate_position(message)
+        else:
+            return check_params
 
     def send_test_notification(self, message):
-        device_operating_system = "ios"
-        title = "Sei entrato in una zona d'interesse per [walk]"
-        body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        return self.send_notification(device_operating_system, message['registration_token'], title, body)
+        return self.send_notification(message['device_operating_system'], message['registration_token'], message['title'], message['body'])
 
     def send_notification(self, device_operating_system, registration_token, title, body):
         return self.firebase_sdk.send_notification(device_operating_system, registration_token, title, body)

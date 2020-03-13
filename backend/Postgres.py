@@ -33,8 +33,24 @@ class Postgres:
         except (Exception, psycopg2.Error) as error:
             print("Failed to insert record into mobile table:", error)
 
-    def check_user_exists(self, user_id):
-        self.cursor.execute('SELECT * from table where id = %(user_id)', {'user_id': user_id})
+    def insert_new_position(self, longitude, latitude, activity, session_id):
+        try:
+            query = "INSERT INTO public.position (longitude, latitude, activity, session_id) VALUES (%s, %s, %s, %s) RETURNING id"
+            params = (longitude, latitude, activity, session_id)
+            self.cursor.execute(query, params)
+            self.connection.commit()
+            last_user_id = self.cursor.fetchone()[0]
+            print("Successfully created new position with id:", last_user_id)
+            return last_user_id
+        except (Exception, psycopg2.Error) as error:
+            print("Failed to insert record into position table:", error)
+
+    def find_user_by_registration_token(self, registration_token):
+        query = "SELECT user_id FROM public.user WHERE registration_token = %s"
+        params = (registration_token,)
+        self.cursor.execute(query, params)
+        self.connection.commit()
+        return self.cursor.fetchone()
 
     def do_sample_query(self):
         self.cursor.execute("SELECT * FROM public.user")
@@ -44,26 +60,3 @@ class Postgres:
         # Close communication with the database
         self.cur.close()
         self.connection.close()
-
-
-# Execute a command: this creates a new table
-'''cur.execute("CREATE TABLE test (id serial PRIMARY KEY, num integer, data varchar);")'''
-
-# Pass data to fill a query placeholders and let Psycopg perform
-# the correct conversion (no more SQL injections!)
-'''cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)",
-            (100, "abcdef"))'''
-
-# Query the database and obtain data as Python objects
-'''
-cur.execute("SELECT * FROM test;")
-print(cur.fetchall())
-'''
-
-'''
-cur.fetchone()
-(1, 100, "abc'def")
-'''
-
-# Make the changes to the database persistent
-'''conn.commit()'''
