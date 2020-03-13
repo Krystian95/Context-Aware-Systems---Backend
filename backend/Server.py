@@ -98,12 +98,18 @@ class Server(BaseHTTPRequestHandler):
     def action_communicate_position(self, message):
         check_params = self.utils.check_parameters_exists(message, ["session_id", "longitude", "latitude", "activity"])
         if check_params is True:
-            return self.user.communicate_position(message)
+            validate_session = self.user.validate_session_id(message["session_id"])
+            if validate_session is True:
+                return self.user.communicate_position(message)
+            else:
+                return validate_session
         else:
             return check_params
 
+
     def send_test_notification(self, message):
-        return self.send_notification(message['device_operating_system'], message['registration_token'], message['title'], message['body'])
+        return self.send_notification(message['device_operating_system'], message['registration_token'],
+                                      message['title'], message['body'])
 
     def send_notification(self, device_operating_system, registration_token, title, body):
         return self.firebase_sdk.send_notification(device_operating_system, registration_token, title, body)

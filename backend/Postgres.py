@@ -33,10 +33,10 @@ class Postgres:
         except (Exception, psycopg2.Error) as error:
             print("Failed to insert record into mobile table:", error)
 
-    def insert_new_position(self, longitude, latitude, activity, session_id):
+    def insert_new_position(self, user_id, longitude, latitude, activity, session_id):
         try:
-            query = "INSERT INTO public.position (longitude, latitude, activity, session_id) VALUES (%s, %s, %s, %s) RETURNING id"
-            params = (longitude, latitude, activity, session_id)
+            query = "INSERT INTO public.position (user_id, longitude, latitude, activity, session_id) VALUES (%s, %s, %s, %s, %s) RETURNING id"
+            params = (user_id, longitude, latitude, activity, session_id)
             self.cursor.execute(query, params)
             self.connection.commit()
             last_user_id = self.cursor.fetchone()[0]
