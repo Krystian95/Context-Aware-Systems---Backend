@@ -100,7 +100,12 @@ class Server(BaseHTTPRequestHandler):
         if check_params is True:
             validate_session = self.user.validate_session_id(message["session_id"])
             if validate_session is True:
-                return self.user.communicate_position(message)
+                check_freshness_session = self.user.check_freshness_session(message["session_id"])
+                if check_freshness_session is not False:  # session_id refreshed
+                    new_session_id = check_freshness_session
+                    message['session_id'] = new_session_id
+                communicate_position = self.user.communicate_position(message)
+                return communicate_position
             else:
                 return validate_session
         else:
