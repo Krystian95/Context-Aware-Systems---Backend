@@ -67,8 +67,7 @@ class User:
     # Aggiunge la nuova sessione a quelle attive
     def register_new_session(self, new_user_id):
         self.remove_session_by_user_id(new_user_id)
-
-        new_session_id = self.utils.generate_new_session_id()
+        new_session_id = self.utils.generate_new_session_id(self.live_sessions)
         now = self.utils.get_current_datetime()
         self.live_sessions.append([new_session_id, new_user_id, now])
         print("live_sessions - AFTER register_new_session():")
