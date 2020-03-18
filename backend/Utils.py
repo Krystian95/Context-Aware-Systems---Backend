@@ -47,4 +47,4 @@ class Utils:
 
     # Ritorna la differenza in minuti tra due date
     def get_datetime_difference_in_minutes(self, date_from, date_to):
-        return (date_to - date_from).seconds * 60
+        return (date_to - date_from).seconds / 60
