@@ -3,12 +3,16 @@ import string
 import datetime
 from datetime import datetime
 import numpy as np
+import json
 
 
 class Utils:
     datetime_format = "%Y-%m-%d %H:%M:%S.%f"
 
-    # Controlla che tutti i parametri richiesti siano presenti nel messaggio
+    def print_json(self, title, json_to_print):
+        print(title + ": " + json.dumps(json_to_print, indent=4))
+
+    # Controlla che tutti i parametri richiesti siano presenti nel messaggio e non vuoti
     def check_parameters_exists(self, params, params_needed):
         for param in params_needed:
             if param not in params or params[param] is None or params[param] == "":

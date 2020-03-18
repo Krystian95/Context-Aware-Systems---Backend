@@ -2,6 +2,7 @@ import sys
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import messaging
+from firebase_admin import exceptions
 
 
 # Firebase class allows Python to communicate with the Google's Firebase service
@@ -21,7 +22,9 @@ class Firebase:
         except:
             print("ERROR connecting to Firebase service")
 
-    def send_notification(self, device_operating_system, registration_token, title, body):
+    def send_notification(self, device_operating_system, registration_token, body):
+
+        body = (bytes(body, 'utf-8')).decode("utf-8")
 
         if device_operating_system == "ios":
             try:
@@ -32,7 +35,6 @@ class Firebase:
                         payload=messaging.APNSPayload(
                             aps=messaging.Aps(
                                 alert=messaging.ApsAlert(
-                                    title=title,
                                     body=body
                                 ),
                                 badge=1,
@@ -46,9 +48,23 @@ class Firebase:
                 response = messaging.send(message)
                 return {
                     "result": True,
-                    "message": "Notification successfully sent to " + response + "."
+                    "message": "Notification successfully sent to " + response + ".",
+                    "notification": {
+                        "device_operating_system": device_operating_system,
+                        "registration_token": registration_token,
+                        "body": body
+                    }
                 }
 
+            except messaging.UnregisteredError as ex:
+                print('Registration token has been unregistered')
+                print("UnregisteredError error: ", sys.exc_info()[0])
+            except exceptions.InvalidArgumentError as ex:
+                print('One or more arguments are invalid (maybe registration_token?)')
+                print("InvalidArgumentError error: ", sys.exc_info()[0])
+            except exceptions.FirebaseError as ex:
+                print('Something else went wrong')
+                print("FirebaseError error: ", sys.exc_info()[0])
             except:
                 print("Unexpected error: ", sys.exc_info()[0])
                 return {

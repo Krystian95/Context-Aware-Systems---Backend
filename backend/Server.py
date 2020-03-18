@@ -14,14 +14,10 @@ def format_response(response_json):
     return json.dumps(response_json).encode(encoding='UTF-8')
 
 
-def print_json(title, json_to_print):
-    print(title + ": " + json.dumps(json_to_print, indent=4))
-
-
 class Server(BaseHTTPRequestHandler):
     postgres = Postgres()
     firebase_sdk = Firebase()
-    user = User(postgres)
+    user = User(postgres, firebase_sdk)
     utils = Utils()
 
     def _set_headers(self):
@@ -74,7 +70,7 @@ class Server(BaseHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
 
-        print_json("response", response)
+        self.utils.print_json("response", response)
 
         self._set_headers()
         self.wfile.write(format_response(response))
@@ -111,13 +107,8 @@ class Server(BaseHTTPRequestHandler):
         else:
             return check_params
 
-
     def send_test_notification(self, message):
-        return self.send_notification(message['device_operating_system'], message['registration_token'],
-                                      message['title'], message['body'])
-
-    def send_notification(self, device_operating_system, registration_token, title, body):
-        return self.firebase_sdk.send_notification(device_operating_system, registration_token, title, body)
+        return self.firebase_sdk.send_notification(message['device_operating_system'], message['registration_token'], message['body'])
 
     def test_query(self):
         self.postgres.do_sample_query()

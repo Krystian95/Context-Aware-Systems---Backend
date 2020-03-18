@@ -3,16 +3,18 @@ from backend.Utils import Utils
 
 class User:
     postgres = None
+    firebase_sdk = None
     utils = Utils()
     live_sessions = []
     minutes_to_wait_before_generate_new_session = {
         "walk": 2,
         "bike": 5,
-        "car": 10,
+        "car": 10
     }
 
-    def __init__(self, postgres):
+    def __init__(self, postgres, firebase_sdk):
         self.postgres = postgres
+        self.firebase_sdk = firebase_sdk
 
     # Verifica che una session_id sia valida
     def validate_session_id(self, session_id):
@@ -37,9 +39,8 @@ class User:
                 date_from = session[2]
                 date_to = self.utils.get_current_datetime()
                 diff_in_minutes = self.utils.get_datetime_difference_in_minutes(date_from, date_to)
-                # print("activity: " + activity)
-                # print("minutes: " + str(self.minutes_to_wait_before_generate_new_session[activity]))
-                if diff_in_minutes > self.minutes_to_wait_before_generate_new_session[activity]:  # Old session -> destroy and create new session for the same user_id
+                if diff_in_minutes > self.minutes_to_wait_before_generate_new_session[
+                    activity]:  # Old session -> destroy and create new session for the same user_id
                     user_id = session[1]
                     self.remove_session_by_user_id(user_id)
                     new_session_id = self.register_new_session(user_id)
@@ -87,7 +88,7 @@ class User:
     def register(self, registration_token):
 
         # Check if the user is already registered, in this case return the user_id
-        user_id = self.postgres.find_user_by_registration_token(registration_token)
+        user_id = self.postgres.get_user_id_by_registration_token(registration_token)
 
         if user_id is None:
             new_user_id = self.postgres.create_new_user(registration_token)
@@ -106,7 +107,7 @@ class User:
                     "message": "User registration has failed."
                 }
         else:
-            new_session_id = self.register_new_session(user_id[0])
+            new_session_id = self.register_new_session(user_id)
             return {
                 "result": True,
                 "message": "A user is already registered for the same registration_token.",
@@ -123,6 +124,13 @@ class User:
                                                             message["activity"],
                                                             message["session_id"])
             if position_id is not None:
+                geofence_message = self.postgres.position_is_inside_geofence(position_id, message["activity"])
+
+                if geofence_message is not None:
+                    registration_token = self.postgres.get_registration_token_by_user_id(user_id)
+                    response = self.firebase_sdk.send_notification("ios", registration_token, geofence_message)
+                    self.utils.print_json("send_notification", response)
+
                 self.update_session_datetime(message["session_id"])
                 return {
                     "result": True,
