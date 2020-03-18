@@ -5,6 +5,11 @@ class User:
     postgres = None
     utils = Utils()
     live_sessions = []
+    minutes_to_wait_before_generate_new_session = {
+        "walk": 2,
+        "bike": 5,
+        "car": 10,
+    }
 
     def __init__(self, postgres):
         self.postgres = postgres
@@ -26,13 +31,15 @@ class User:
     # Calcola la freschezza di una sessione.
     # Se l'ultimo update rilevato risale a più di 5 minuti fa
     # genera un nuovo session_id
-    def check_freshness_session(self, session_id):
+    def check_freshness_session(self, session_id, activity):
         for session in self.live_sessions:
             if session[0] == session_id:
                 date_from = session[2]
                 date_to = self.utils.get_current_datetime()
                 diff_in_minutes = self.utils.get_datetime_difference_in_minutes(date_from, date_to)
-                if diff_in_minutes > 5:  # Old session -> destroy and create new session for the same user_id
+                # print("activity: " + activity)
+                # print("minutes: " + str(self.minutes_to_wait_before_generate_new_session[activity]))
+                if diff_in_minutes > self.minutes_to_wait_before_generate_new_session[activity]:  # Old session -> destroy and create new session for the same user_id
                     user_id = session[1]
                     self.remove_session_by_user_id(user_id)
                     new_session_id = self.register_new_session(user_id)
