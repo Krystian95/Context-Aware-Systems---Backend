@@ -11,7 +11,7 @@ class Utils:
     # Controlla che tutti i parametri richiesti siano presenti nel messaggio
     def check_parameters_exists(self, params, params_needed):
         for param in params_needed:
-            if param not in params:
+            if param not in params or params[param] is None or params[param] == "":
                 return {
                     "result": False,
                     "type": "Error",
