@@ -5,6 +5,7 @@ class User:
     postgres = None
     firebase_sdk = None
     utils = Utils()
+    # Memorizza le sessioni attive: [[0: session_id | 1: user_id | 2: current_datetime | 3: last_message]]
     live_sessions = []
     minutes_to_wait_before_generate_new_session = {
         "walk": 2,
@@ -57,11 +58,22 @@ class User:
 
         return None
 
+    # Restituisce l'ultima posizione comunicata di una specifica session_id
+    def get_last_position_saved_by_session_id(self, session_id):
+        for session in self.live_sessions:
+            if session[0] == session_id:
+                return session[3]
+
+        return None
+
     # Elimina l'eventuale sessione già esistente di 'new_user_id'
     def remove_session_by_user_id(self, user_id):
         for session in self.live_sessions:
             if session[1] == user_id:
                 self.live_sessions.remove(session)
+                return True
+
+        return False
 
     # Aggiorna il datetime di ultimo utilizzo di una sessione
     def update_session_datetime(self, session_id):
@@ -72,15 +84,25 @@ class User:
 
         return False
 
+    # Memorizza l'ultima posizione comunicata
+    def save_last_message_in_session(self, session_id, last_message):
+        for session in self.live_sessions:
+            if session[0] == session_id:
+                session[3] = last_message
+                return True
+
+        return False
+
     # Aggiunge la nuova sessione a quelle attive
-    def register_new_session(self, new_user_id):
-        self.remove_session_by_user_id(new_user_id)
-        new_session_id = self.utils.generate_new_session_id(self.live_sessions)
+    def register_new_session(self, user_id, old_position=[]):
+        self.remove_session_by_user_id(user_id)
+        session_id = self.utils.generate_new_session_id(self.live_sessions)
         now = self.utils.get_current_datetime()
-        self.live_sessions.append([new_session_id, new_user_id, now])
+        session = [session_id, user_id, now, old_position]
+        self.live_sessions.append(session)
         print("live_sessions - AFTER register_new_session():")
         print(self.live_sessions)
-        return new_session_id
+        return session_id
 
     # Riceve il registration_token e verifica se esiste già nel db,
     # se non esiste crea il nuovo utente.
@@ -131,11 +153,19 @@ class User:
                     response = self.firebase_sdk.send_notification("ios", registration_token, geofence_message)
                     self.utils.print_json("send_notification", response)
 
+                session_id = message["session_id"]
+
+                last_position_changed = self.check_changed_activity(message["activity"], session_id)
+                if last_position_changed is not None:  # Activity changed
+                    print("ACTIVITY CHANGED!")
+                    session_id = self.register_new_session(user_id, last_position_changed)
+
+                self.save_last_message_in_session(session_id, message)
                 self.update_session_datetime(message["session_id"])
                 return {
                     "result": True,
                     "message": "Position successfully inserted.",
-                    "session_id": message["session_id"]
+                    "session_id": session_id
                 }
             else:
                 return {
@@ -143,3 +173,13 @@ class User:
                     "type": "Error",
                     "message": "Inserting position has failed."
                 }
+
+    def check_changed_activity(self, current_activity, session_id):
+        last_position = self.get_last_position_saved_by_session_id(session_id)
+
+        if last_position is not None and len(last_position) > 0:
+            last_activity = last_position["activity"]
+            if last_activity != current_activity:
+                return last_position
+
+        return None
