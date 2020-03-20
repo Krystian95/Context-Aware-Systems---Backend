@@ -35,10 +35,10 @@ class Postgres:
             print("Failed to insert record into mobile table:", error)
 
     # Inserisce una nuova posizione
-    def insert_new_position(self, user_id, longitude, latitude, activity, session_id):
+    def insert_new_position(self, user_id, longitude, latitude, activity, session_id, is_auto_generated):
         try:
-            query = "INSERT INTO public.position (user_id, longitude, latitude, activity, session_id) VALUES (%s, %s, %s, %s, %s) RETURNING id"
-            params = (user_id, longitude, latitude, activity, session_id)
+            query = "INSERT INTO public.position (user_id, longitude, latitude, activity, session_id, auto_generated) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id"
+            params = (user_id, longitude, latitude, activity, session_id, is_auto_generated)
             self.cursor.execute(query, params)
             self.connection.commit()
             last_position_id = self.cursor.fetchone()[0]

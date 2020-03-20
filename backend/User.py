@@ -140,25 +140,31 @@ class User:
     def communicate_position(self, message):
 
         user_id = self.get_user_id_by_session_id(message["session_id"])
+        session_id = message["session_id"]
 
         if user_id is not None:
+            # Activity changed
+            last_position_changed = self.check_changed_activity(message["activity"], message["session_id"])
+            if last_position_changed is not None:
+                print("ACTIVITY CHANGED!")
+                session_id = self.register_new_session(user_id, last_position_changed)
+                # Inserisco un nuovo punto con: coordinate nuove ed activity e session_id vecchi
+                position_id = self.postgres.insert_new_position(user_id, message["longitude"], message["latitude"],
+                                                                last_position_changed["activity"],
+                                                                last_position_changed["session_id"],
+                                                                is_auto_generated=True)
+            # New position
             position_id = self.postgres.insert_new_position(user_id, message["longitude"], message["latitude"],
                                                             message["activity"],
-                                                            message["session_id"])
+                                                            session_id,
+                                                            is_auto_generated=None)
             if position_id is not None:
+                # Notification
                 geofence_message = self.postgres.position_is_inside_geofence(position_id, message["activity"])
-
                 if geofence_message is not None:
                     registration_token = self.postgres.get_registration_token_by_user_id(user_id)
                     response = self.firebase_sdk.send_notification("ios", registration_token, geofence_message)
                     self.utils.print_json("send_notification", response)
-
-                session_id = message["session_id"]
-
-                last_position_changed = self.check_changed_activity(message["activity"], session_id)
-                if last_position_changed is not None:  # Activity changed
-                    print("ACTIVITY CHANGED!")
-                    session_id = self.register_new_session(user_id, last_position_changed)
 
                 self.save_last_message_in_session(session_id, message)
                 self.update_session_datetime(message["session_id"])
