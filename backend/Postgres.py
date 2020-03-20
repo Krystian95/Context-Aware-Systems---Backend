@@ -10,7 +10,7 @@ class Postgres:
     def __init__(self):
         # Database connection
         try:
-            self.connection = psycopg2.connect(user="postgres", database="db_llr")
+            self.connection = psycopg2.connect(user="postgres", password="ih0SAS@raif", database="db_llr")
             # self.connection = psycopg2.connect(user="postgres", password="ih0SAS@raif", host="localhost", port="62445", database="db_llr")
 
             # Open a cursor to perform database operations
@@ -43,6 +43,9 @@ class Postgres:
             self.connection.commit()
             last_position_id = self.cursor.fetchone()[0]
             print("Successfully created new position with id:", last_position_id)
+            query = "listen qgis; notify qgis, 'added_path';"
+            self.cursor.execute(query)
+            self.connection.commit()
             return last_position_id
         except (Exception, psycopg2.Error) as error:
             print("Failed to insert record into position table:", error)
