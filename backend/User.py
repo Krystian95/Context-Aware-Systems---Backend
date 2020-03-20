@@ -40,8 +40,7 @@ class User:
                 date_from = session[2]
                 date_to = self.utils.get_current_datetime()
                 diff_in_minutes = self.utils.get_datetime_difference_in_minutes(date_from, date_to)
-                if diff_in_minutes > self.minutes_to_wait_before_generate_new_session[
-                    activity]:  # Old session -> destroy and create new session for the same user_id
+                if diff_in_minutes > self.minutes_to_wait_before_generate_new_session[activity]:  # Old session -> destroy and create new session for the same user_id
                     user_id = session[1]
                     self.remove_session_by_user_id(user_id)
                     new_session_id = self.register_new_session(user_id)
@@ -99,6 +98,12 @@ class User:
         session_id = self.utils.generate_new_session_id(self.live_sessions)
         now = self.utils.get_current_datetime()
         session = [session_id, user_id, now, old_position]
+        '''session = {
+            "session_id": session_id,
+            "user_id": user_id,
+            "date_time": now,
+            "old_position": old_position
+        }'''
         self.live_sessions.append(session)
         print("live_sessions - AFTER register_new_session():")
         print(self.live_sessions)
@@ -160,10 +165,15 @@ class User:
                                                             is_auto_generated=None)
             if position_id is not None:
                 # Notification
-                geofence_message = self.postgres.position_is_inside_geofence(position_id, message["activity"])
-                if geofence_message is not None:
+                geofence_triggered = self.postgres.position_inside_geofence(position_id, message["activity"])
+                geofence_triggered_id = geofence_triggered[0]
+                geofence_triggered_message = geofence_triggered[1]
+                # geofence_already_triggered = self.postgres.geofence_already_triggered(session_id, message["activity"])
+
+                if geofence_triggered is not None:
                     registration_token = self.postgres.get_registration_token_by_user_id(user_id)
-                    response = self.firebase_sdk.send_notification("ios", registration_token, geofence_message)
+                    response = self.firebase_sdk.send_notification("ios", registration_token,
+                                                                   geofence_triggered_message)
                     self.utils.print_json("send_notification", response)
 
                 self.save_last_message_in_session(session_id, message)

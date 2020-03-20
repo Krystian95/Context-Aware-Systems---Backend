@@ -24,7 +24,13 @@ class Postgres:
     # Crea un nuovo utente
     def create_new_user(self, registration_token):
         try:
-            query = "INSERT INTO public.user (registration_token) VALUES (%s) RETURNING user_id"
+            query = '''
+                INSERT INTO public.user
+                (registration_token)
+                VALUES
+                (%s)
+                RETURNING user_id
+            '''
             params = (registration_token,)
             self.cursor.execute(query, params)
             self.connection.commit()
@@ -37,7 +43,13 @@ class Postgres:
     # Inserisce una nuova posizione
     def insert_new_position(self, user_id, longitude, latitude, activity, session_id, is_auto_generated):
         try:
-            query = "INSERT INTO public.position (user_id, longitude, latitude, activity, session_id, auto_generated) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id"
+            query = '''
+                INSERT INTO public.position
+                (user_id, longitude, latitude, activity, session_id, auto_generated)
+                VALUES
+                (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+            '''
             params = (user_id, longitude, latitude, activity, session_id, is_auto_generated)
             self.cursor.execute(query, params)
             self.connection.commit()
@@ -51,11 +63,12 @@ class Postgres:
             print("Failed to insert record into position table:", error)
 
     # Ritorna il messaggio di un geofence, None altrimenti
-    def position_is_inside_geofence(self, position_id, activity):
+    def position_inside_geofence(self, position_id, activity):
 
         if activity == "walk":
             query = """
                 SELECT
+                    gid,
                     geofence.message
                 FROM public.position, public.geofence_walk as geofence
                 WHERE 
@@ -65,6 +78,7 @@ class Postgres:
         elif activity == "bike":
             query = """
                 SELECT
+                    gid,
                     geofence.message
                 FROM public.position, public.geofence_bike as geofence
                 WHERE 
@@ -74,6 +88,7 @@ class Postgres:
         elif activity == "car":
             query = """
                 SELECT
+                    gid,
                     geofence.message
                 FROM public.position, public.geofence_car as geofence
                 WHERE 
@@ -84,15 +99,21 @@ class Postgres:
         params = (position_id,)
         self.cursor.execute(query, params)
         self.connection.commit()
-        geofence_message = self.cursor.fetchone()
-        if geofence_message is None:
+        geofence = self.cursor.fetchone()
+        print("geofence:")
+        print(geofence)
+        if geofence is None:
             return None
         else:
-            return geofence_message[0]
+            return geofence
 
     # Ritorna l'id un utente registrato (se esiste) cercandolo con il registration_token
     def get_user_id_by_registration_token(self, registration_token):
-        query = "SELECT user_id FROM public.user WHERE registration_token = %s"
+        query = '''
+            SELECT user_id
+            FROM public.user
+            WHERE registration_token = %s
+        '''
         params = (registration_token,)
         self.cursor.execute(query, params)
         self.connection.commit()
@@ -104,7 +125,11 @@ class Postgres:
 
     # Ritorna il registration_token di un utente registrato (se esiste) cercandolo con il suo id
     def get_registration_token_by_user_id(self, user_id):
-        query = "SELECT registration_token FROM public.user WHERE user_id = %s"
+        query = '''
+            SELECT registration_token
+            FROM public.user
+            WHERE user_id = %s
+        '''
         params = (user_id,)
         self.cursor.execute(query, params)
         self.connection.commit()
@@ -114,11 +139,29 @@ class Postgres:
         else:
             return result[0]
 
+    # Verifica se per una data session_id e activity un
+    def geofence_already_triggered(self, session_id, activity):
+        query = '''
+            SELECT session_id, geofence_triggered
+            FROM public.position
+            WHERE session_id = %s AND activity = %s 
+            GROUP BY session_id, geofence_triggered
+        '''
+        params = (session_id, activity,)
+        self.cursor.execute(query, params)
+        self.connection.commit()
+        result = self.cursor.fetchone()
+        print(result)
+        if result[1] is True:
+            return True
+        else:
+            return False
+
     def do_sample_query(self):
         self.cursor.execute("SELECT * FROM public.user")
         print(self.cursor.fetchall())
 
+    # Close communication with the database
     def close_connection(self):
-        # Close communication with the database
         self.cur.close()
         self.connection.close()
