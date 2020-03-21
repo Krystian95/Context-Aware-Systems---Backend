@@ -100,8 +100,6 @@ class Postgres:
         self.cursor.execute(query, params)
         self.connection.commit()
         geofence = self.cursor.fetchone()
-        print("geofence:")
-        print(geofence)
         if geofence is None:
             return None
         else:
@@ -138,24 +136,6 @@ class Postgres:
             return None
         else:
             return result[0]
-
-    # Verifica se per una data session_id e activity un
-    def geofence_already_triggered(self, session_id, activity):
-        query = '''
-            SELECT session_id, geofence_triggered
-            FROM public.position
-            WHERE session_id = %s AND activity = %s 
-            GROUP BY session_id, geofence_triggered
-        '''
-        params = (session_id, activity,)
-        self.cursor.execute(query, params)
-        self.connection.commit()
-        result = self.cursor.fetchone()
-        print(result)
-        if result[1] is True:
-            return True
-        else:
-            return False
 
     def do_sample_query(self):
         self.cursor.execute("SELECT * FROM public.user")

@@ -6,11 +6,26 @@ import numpy as np
 import json
 
 
+class DatetimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        try:
+            return super(DatetimeEncoder, obj).default(obj)
+        except TypeError:
+            return str(obj)
+
+
 class Utils:
     datetime_format = "%Y-%m-%d %H:%M:%S.%f"
 
-    def print_json(self, title, json_to_print):
-        print(title + ": " + json.dumps(json_to_print, indent=4))
+    def print_json(self, json_to_print, title=None):
+        if title is not None:
+            print(title + ":")
+        print(json.dumps(json_to_print, indent=4, cls=DatetimeEncoder))
+
+    def print_array_of_json(self, title, array):
+        print(title + ":")
+        for json_obj in array:
+            self.print_json(json_obj)
 
     # Controlla che tutti i parametri richiesti siano presenti nel messaggio e non vuoti
     def check_parameters_exists(self, params, params_needed):

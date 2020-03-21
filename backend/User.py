@@ -20,9 +20,9 @@ class User:
     # Verifica che una session_id sia valida
     def validate_session_id(self, session_id):
         print("live_sessions - BEFORE validate_session_id():")
-        print(self.live_sessions)
+        self.utils.print_array_of_json("Live sessions", self.live_sessions)
         for session in self.live_sessions:
-            if session[0] == session_id:
+            if session["session_id"] == session_id:
                 return True
 
         return {
@@ -36,12 +36,12 @@ class User:
     # genera un nuovo session_id
     def check_freshness_session(self, session_id, activity):
         for session in self.live_sessions:
-            if session[0] == session_id:
-                date_from = session[2]
+            if session["session_id"] == session_id:
+                date_from = session["date_time"]
                 date_to = self.utils.get_current_datetime()
                 diff_in_minutes = self.utils.get_datetime_difference_in_minutes(date_from, date_to)
                 if diff_in_minutes > self.minutes_to_wait_before_generate_new_session[activity]:  # Old session -> destroy and create new session for the same user_id
-                    user_id = session[1]
+                    user_id = session["user_id"]
                     self.remove_session_by_user_id(user_id)
                     new_session_id = self.register_new_session(user_id)
                     print("NEW session_id GENERATED: " + new_session_id)
@@ -52,23 +52,23 @@ class User:
     # Restituisce l'user_id di una specifica session_id
     def get_user_id_by_session_id(self, session_id):
         for session in self.live_sessions:
-            if session[0] == session_id:
-                return session[1]
+            if session["session_id"] == session_id:
+                return session["user_id"]
 
         return None
 
     # Restituisce l'ultima posizione comunicata di una specifica session_id
-    def get_last_position_saved_by_session_id(self, session_id):
+    def get_previous_position_by_session_id(self, session_id):
         for session in self.live_sessions:
-            if session[0] == session_id:
-                return session[3]
+            if session["session_id"] == session_id:
+                return session["previous_position"]
 
         return None
 
     # Elimina l'eventuale sessione già esistente di 'new_user_id'
     def remove_session_by_user_id(self, user_id):
         for session in self.live_sessions:
-            if session[1] == user_id:
+            if session["user_id"] == user_id:
                 self.live_sessions.remove(session)
                 return True
 
@@ -77,8 +77,8 @@ class User:
     # Aggiorna il datetime di ultimo utilizzo di una sessione
     def update_session_datetime(self, session_id):
         for session in self.live_sessions:
-            if session[0] == session_id:
-                session[2] = self.utils.get_current_datetime()
+            if session["session_id"] == session_id:
+                session["date_time"] = self.utils.get_current_datetime()
                 return True
 
         return False
@@ -86,9 +86,43 @@ class User:
     # Memorizza l'ultima posizione comunicata
     def save_last_message_in_session(self, session_id, last_message):
         for session in self.live_sessions:
-            if session[0] == session_id:
-                session[3] = last_message
+            if session["session_id"] == session_id:
+                session["previous_position"] = last_message
                 return True
+
+        return False
+
+    # Memorizza l'activity corrente
+    def save_current_activity_in_session(self, session_id, current_activity):
+        for session in self.live_sessions:
+            if session["session_id"] == session_id:
+                session["current_activity"] = current_activity
+                return True
+
+        return False
+
+    # Ritorna l'activity memorizzata nella sessione
+    def get_activity_in_session(self, session_id):
+        for session in self.live_sessions:
+            if session["session_id"] == session_id:
+                return session["current_activity"]
+
+        return False
+
+    # Memorizza l'id del geofence attivato (se esiste)
+    def save_current_geofence_triggered_in_session(self, session_id, id_geofence_triggered):
+        for session in self.live_sessions:
+            if session["session_id"] == session_id:
+                session["current_id_geofence_triggered"] = id_geofence_triggered
+                return True
+
+        return False
+
+    # Ritorna l'id del geofence attivato (se esiste) memorizzato nella sessione
+    def get_id_geofence_triggered_in_session(self, session_id):
+        for session in self.live_sessions:
+            if session["session_id"] == session_id:
+                return session["current_id_geofence_triggered"]
 
         return False
 
@@ -97,16 +131,17 @@ class User:
         self.remove_session_by_user_id(user_id)
         session_id = self.utils.generate_new_session_id(self.live_sessions)
         now = self.utils.get_current_datetime()
-        session = [session_id, user_id, now, old_position]
-        '''session = {
+        session = {
             "session_id": session_id,
             "user_id": user_id,
             "date_time": now,
-            "old_position": old_position
-        }'''
+            "current_activity": None,
+            "current_id_geofence_triggered": None,
+            "previous_position": old_position,
+        }
         self.live_sessions.append(session)
         print("live_sessions - AFTER register_new_session():")
-        print(self.live_sessions)
+        self.utils.print_array_of_json("Live sessions", self.live_sessions)
         return session_id
 
     # Riceve il registration_token e verifica se esiste già nel db,
@@ -163,18 +198,31 @@ class User:
                                                             message["activity"],
                                                             session_id,
                                                             is_auto_generated=None)
+
             if position_id is not None:
                 # Notification
                 geofence_triggered = self.postgres.position_inside_geofence(position_id, message["activity"])
-                geofence_triggered_id = geofence_triggered[0]
-                geofence_triggered_message = geofence_triggered[1]
-                # geofence_already_triggered = self.postgres.geofence_already_triggered(session_id, message["activity"])
+
+                print("User is inside geofence:")
+                print(geofence_triggered)
+
+                geofence_triggered_id = None
 
                 if geofence_triggered is not None:
-                    registration_token = self.postgres.get_registration_token_by_user_id(user_id)
-                    response = self.firebase_sdk.send_notification("ios", registration_token,
-                                                                   geofence_triggered_message)
-                    self.utils.print_json("send_notification", response)
+                    geofence_triggered_id = geofence_triggered[0]
+
+                    previous_activity = self.get_activity_in_session(session_id)
+                    previous_id_geofence_triggered = self.get_id_geofence_triggered_in_session(session_id)
+                    if previous_activity is None or not (message["activity"] == previous_activity and geofence_triggered_id == previous_id_geofence_triggered):
+                        geofence_triggered_message = geofence_triggered[1]
+                        registration_token = self.postgres.get_registration_token_by_user_id(user_id)
+                        response = self.firebase_sdk.send_notification("ios", registration_token,
+                                                                       geofence_triggered_message)
+                        self.utils.print_json(response, "send_notification()")
+
+                self.save_current_geofence_triggered_in_session(session_id, geofence_triggered_id)
+
+                self.save_current_activity_in_session(session_id, message["activity"])
 
                 self.save_last_message_in_session(session_id, message)
                 self.update_session_datetime(message["session_id"])
@@ -191,7 +239,7 @@ class User:
                 }
 
     def check_changed_activity(self, current_activity, session_id):
-        last_position = self.get_last_position_saved_by_session_id(session_id)
+        last_position = self.get_previous_position_by_session_id(session_id)
 
         if last_position is not None and len(last_position) > 0:
             last_activity = last_position["activity"]
