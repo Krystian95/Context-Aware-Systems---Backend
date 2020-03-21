@@ -45,6 +45,7 @@ class Server(BaseHTTPRequestHandler):
         length = int(self.headers.get('content-length'))
         message = json.loads(self.rfile.read(length))
 
+        print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
         print("message = " + json.dumps(message, indent=4))
         response = {}
 
@@ -70,7 +71,7 @@ class Server(BaseHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
 
-        self.utils.print_json(response, "Response:")
+        self.utils.print_json(response, "Response")
 
         self._set_headers()
         self.wfile.write(format_response(response))

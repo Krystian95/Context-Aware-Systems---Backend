@@ -137,6 +137,17 @@ class Postgres:
         else:
             return result[0]
 
+    # Setta l'id del geofente triggerato per una determinata posizione
+    def update_id_geofence_triggered_position(self, position_id, id_geofence_triggered):
+        query = '''
+            UPDATE public.position
+            SET id_geofence_triggered = %s
+            WHERE position.id = %s
+        '''
+        params = (id_geofence_triggered, position_id,)
+        self.cursor.execute(query, params)
+        self.connection.commit()
+
     def do_sample_query(self):
         self.cursor.execute("SELECT * FROM public.user")
         print(self.cursor.fetchall())

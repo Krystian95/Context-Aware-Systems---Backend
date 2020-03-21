@@ -188,7 +188,7 @@ class User:
             if last_position_changed is not None:
                 print("ACTIVITY CHANGED!")
                 session_id = self.register_new_session(user_id, last_position_changed)
-                # Inserisco un nuovo punto con: coordinate nuove ed activity e session_id vecchi
+                # Inserisco un nuovo punto fittizio con: coordinate nuove ed activity e session_id vecchi
                 position_id = self.postgres.insert_new_position(user_id, message["longitude"], message["latitude"],
                                                                 last_position_changed["activity"],
                                                                 last_position_changed["session_id"],
@@ -210,6 +210,7 @@ class User:
 
                 if geofence_triggered is not None:
                     geofence_triggered_id = geofence_triggered[0]
+                    self.postgres.update_id_geofence_triggered_position(position_id, geofence_triggered_id)
 
                     previous_activity = self.get_activity_in_session(session_id)
                     previous_id_geofence_triggered = self.get_id_geofence_triggered_in_session(session_id)
