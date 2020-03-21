@@ -206,25 +206,23 @@ class User:
                 print("User is inside geofence:")
                 print(geofence_triggered)
 
-                geofence_triggered_id = None
-
                 if geofence_triggered is not None:
                     geofence_triggered_id = geofence_triggered[0]
-                    self.postgres.update_id_geofence_triggered_position(position_id, geofence_triggered_id)
-
                     previous_activity = self.get_activity_in_session(session_id)
                     previous_id_geofence_triggered = self.get_id_geofence_triggered_in_session(session_id)
-                    if previous_activity is None or not (message["activity"] == previous_activity and geofence_triggered_id == previous_id_geofence_triggered):
+
+                    if previous_activity is None or message["activity"] != previous_activity or geofence_triggered_id != previous_id_geofence_triggered:
                         geofence_triggered_message = geofence_triggered[1]
                         registration_token = self.postgres.get_registration_token_by_user_id(user_id)
                         response = self.firebase_sdk.send_notification("ios", registration_token,
                                                                        geofence_triggered_message)
                         self.utils.print_json(response, "send_notification()")
-
-                self.save_current_geofence_triggered_in_session(session_id, geofence_triggered_id)
+                        self.save_current_geofence_triggered_in_session(session_id, geofence_triggered_id)
+                        self.postgres.update_id_geofence_triggered_position(position_id, geofence_triggered_id)
+                else:
+                    self.save_current_geofence_triggered_in_session(session_id, None)
 
                 self.save_current_activity_in_session(session_id, message["activity"])
-
                 self.save_last_message_in_session(session_id, message)
                 self.update_session_datetime(message["session_id"])
                 return {
