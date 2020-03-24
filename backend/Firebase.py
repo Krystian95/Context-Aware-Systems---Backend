@@ -35,6 +35,7 @@ class Firebase:
                         payload=messaging.APNSPayload(
                             aps=messaging.Aps(
                                 alert=messaging.ApsAlert(
+                                    title="C'è un nuovo messaggio per te",
                                     body=body
                                 ),
                                 badge=1,
