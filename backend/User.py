@@ -32,7 +32,7 @@ class User:
         }
 
     # Calcola la freschezza di una sessione.
-    # Se l'ultimo update rilevato risale a più di 5 minuti fa
+    # Se l'ultimo update rilevato risale a più di x minuti fa
     # genera un nuovo session_id
     def check_freshness_session(self, session_id, activity):
         for session in self.live_sessions:

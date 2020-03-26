@@ -105,7 +105,7 @@ class Postgres:
         else:
             return geofence
 
-    # Ritorna l'id un utente registrato (se esiste) cercandolo con il registration_token
+    # Ritorna l'id di un utente registrato (se esiste) cercandolo con il registration_token
     def get_user_id_by_registration_token(self, registration_token):
         query = '''
             SELECT user_id
