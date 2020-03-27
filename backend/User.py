@@ -5,7 +5,7 @@ class User:
     postgres = None
     firebase_sdk = None
     utils = Utils()
-    # Memorizza le sessioni attive: [[0: session_id | 1: user_id | 2: current_datetime | 3: last_message]]
+    # Memorizza le sessioni attive
     live_sessions = []
     minutes_to_wait_before_generate_new_session = {
         "walk": 2,
@@ -126,7 +126,7 @@ class User:
 
         return False
 
-    # Aggiunge la nuova sessione a quelle attive
+    # Registra una nuova sessione per uno specifico utente
     def register_new_session(self, user_id, old_position=[]):
         self.remove_session_by_user_id(user_id)
         session_id = self.utils.generate_new_session_id(self.live_sessions)
@@ -189,10 +189,10 @@ class User:
                 print("ACTIVITY CHANGED!")
                 session_id = self.register_new_session(user_id, last_position_changed)
                 # Inserisco un nuovo punto fittizio con: coordinate nuove ed activity e session_id vecchi
-                position_id = self.postgres.insert_new_position(user_id, message["longitude"], message["latitude"],
-                                                                last_position_changed["activity"],
-                                                                last_position_changed["session_id"],
-                                                                is_auto_generated=True)
+                self.postgres.insert_new_position(user_id, message["longitude"], message["latitude"],
+                                                  last_position_changed["activity"],
+                                                  last_position_changed["session_id"],
+                                                  is_auto_generated=True)
             # New position
             position_id = self.postgres.insert_new_position(user_id, message["longitude"], message["latitude"],
                                                             message["activity"],
