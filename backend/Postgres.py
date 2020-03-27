@@ -62,39 +62,18 @@ class Postgres:
         except (Exception, psycopg2.Error) as error:
             print("Failed to insert record into position table:", error)
 
-    # Ritorna il messaggio di un geofence, None altrimenti
+    # Ritorna il record di un geofence, None altrimenti
     def position_inside_geofence(self, position_id, activity):
 
-        if activity == "walk":
-            query = """
-                SELECT
-                    gid,
-                    geofence.message
-                FROM public.position, public.geofence_walk as geofence
-                WHERE 
-                    ST_Contains(geofence.geom, position.geom) = TRUE AND
-                    position.id = %s
-            """
-        elif activity == "bike":
-            query = """
-                SELECT
-                    gid,
-                    geofence.message
-                FROM public.position, public.geofence_bike as geofence
-                WHERE 
-                    ST_Contains(geofence.geom, position.geom) = TRUE AND
-                    position.id = %s
-            """
-        elif activity == "car":
-            query = """
-                SELECT
-                    gid,
-                    geofence.message
-                FROM public.position, public.geofence_car as geofence
-                WHERE 
-                    ST_Contains(geofence.geom, position.geom) = TRUE AND
-                    position.id = %s
-            """
+        query = f'''
+            SELECT
+                gid,
+                geofence.message
+            FROM public.position, public.geofence_{activity} as geofence
+            WHERE 
+                ST_Contains(geofence.geom, position.geom) = TRUE AND
+                position.id = %s
+            '''
 
         params = (position_id,)
         self.cursor.execute(query, params)
