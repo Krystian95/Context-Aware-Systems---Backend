@@ -92,14 +92,14 @@ class Server(BaseHTTPRequestHandler):
             return check_params
 
     def action_communicate_position(self, message):
-        check_params = self.utils.check_parameters_exists(message, ["session_id", "longitude", "latitude", "activity"])
+        check_params = self.utils.check_parameters_exists(message, ["properties", "geometry"])
         if check_params is True:
-            validate_session = self.user.validate_session_id(message["session_id"])
+            validate_session = self.user.validate_session_id(message["properties"]["session_id"])
             if validate_session is True:
-                check_freshness_session = self.user.check_freshness_session(message["session_id"], message["activity"])
+                check_freshness_session = self.user.check_freshness_session(message["properties"]["session_id"], message["properties"]["activity"])
                 if check_freshness_session is not False:  # session_id refreshed
                     new_session_id = check_freshness_session
-                    message['session_id'] = new_session_id
+                    message["properties"]["session_id"] = new_session_id
                 communicate_position = self.user.communicate_position(message)
                 return communicate_position
             else:

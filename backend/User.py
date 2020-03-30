@@ -179,6 +179,11 @@ class User:
     # Inserisce la nuova posizione inviata dal dispositivo
     def communicate_position(self, message):
 
+        message["session_id"] = message["properties"]["session_id"]
+        message["activity"] = message["properties"]["activity"]
+        message["latitude"] = message["geometry"]["coordinates"][0]
+        message["longitude"] = message["geometry"]["coordinates"][1]
+        
         user_id = self.get_user_id_by_session_id(message["session_id"])
         session_id = message["session_id"]
 
