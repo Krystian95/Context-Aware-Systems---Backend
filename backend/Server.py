@@ -48,6 +48,9 @@ class Server(BaseHTTPRequestHandler):
         print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
         print("message = " + json.dumps(message, indent=4))
 
+        if "properties" in message.keys():
+            message["action"] = message["properties"]["action"]
+
         check_params = self.check_parameters_exists(message, ["action"])
         if check_params is not True:
             response = check_params
