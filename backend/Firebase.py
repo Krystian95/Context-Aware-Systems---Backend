@@ -22,7 +22,7 @@ class Firebase:
         except:
             print("ERROR connecting to Firebase service")
 
-    def send_notification(self, device_operating_system, registration_token, body):
+    def send_notification(self, device_operating_system, registration_token, body, position_id_device):
 
         body = (bytes(body, 'utf-8')).decode("utf-8")
 
@@ -36,7 +36,8 @@ class Firebase:
                             aps=messaging.Aps(
                                 alert=messaging.ApsAlert(
                                     title="C'è un nuovo messaggio per te",
-                                    body=body
+                                    body=body,
+                                    custom_data={"position_id_device": position_id_device}
                                 ),
                                 badge=1,
                                 sound='bingbong.aiff'
@@ -53,6 +54,7 @@ class Firebase:
                     "notification": {
                         "device_operating_system": device_operating_system,
                         "registration_token": registration_token,
+                        "position_id_device": position_id_device,
                         "body": body
                     }
                 }

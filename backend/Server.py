@@ -111,7 +111,7 @@ class Server(BaseHTTPRequestHandler):
             return check_params
 
     def send_test_notification(self, message):
-        return self.firebase_sdk.send_notification(message['device_operating_system'], message['registration_token'], message['body'])
+        return self.firebase_sdk.send_notification(message['device_operating_system'], message['registration_token'], message['body'], message['position_id_device'])
 
     def test_query(self):
         self.postgres.do_sample_query()

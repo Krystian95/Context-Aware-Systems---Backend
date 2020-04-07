@@ -181,6 +181,7 @@ class User:
 
         message["session_id"] = message["properties"]["session_id"]
         message["activity"] = message["properties"]["activity"]
+        message["position_id_device"] = message["properties"]["position_id_device"]
         message["latitude"] = message["geometry"]["coordinates"][0]
         message["longitude"] = message["geometry"]["coordinates"][1]
         
@@ -220,7 +221,7 @@ class User:
                         geofence_triggered_message = geofence_triggered[1]
                         registration_token = self.postgres.get_registration_token_by_user_id(user_id)
                         response = self.firebase_sdk.send_notification("ios", registration_token,
-                                                                       geofence_triggered_message)
+                                                                       geofence_triggered_message, message["position_id_device"])
                         self.utils.print_json(response, "send_notification()")
                         self.save_current_geofence_triggered_in_session(session_id, geofence_triggered_id)
                         self.postgres.update_id_geofence_triggered_position(position_id, geofence_triggered_id)
