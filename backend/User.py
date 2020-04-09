@@ -234,7 +234,8 @@ class User:
                 return {
                     "result": True,
                     "message": "Position successfully inserted.",
-                    "session_id": session_id
+                    "session_id": session_id,
+                    "position_id_device": message["position_id_device"]
                 }
             else:
                 return {
