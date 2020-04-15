@@ -182,6 +182,7 @@ class User:
         message["session_id"] = message["properties"]["session_id"]
         message["activity"] = message["properties"]["activity"]
         message["position_id_device"] = message["properties"]["position_id_device"]
+        message["position_id_group"] = message["properties"]["position_id_group"]
         message["latitude"] = message["geometry"]["coordinates"][0]
         message["longitude"] = message["geometry"]["coordinates"][1]
         
@@ -216,8 +217,16 @@ class User:
                     geofence_triggered_id = geofence_triggered[0]
                     previous_activity = self.get_activity_in_session(session_id)
                     previous_id_geofence_triggered = self.get_id_geofence_triggered_in_session(session_id)
+                    last_position = self.get_previous_position_by_session_id(session_id)
 
-                    if previous_activity is None or message["activity"] != previous_activity or geofence_triggered_id != previous_id_geofence_triggered:
+                    print(last_position)
+
+                    if last_position:
+                        previous_position_id_group = last_position["properties"]["position_id_group"]
+                    else:
+                        previous_position_id_group = None
+
+                    if previous_activity is None or message["activity"] != previous_activity or geofence_triggered_id != previous_id_geofence_triggered or (geofence_triggered_id == previous_id_geofence_triggered and (previous_position_id_group == message["position_id_group"] or previous_position_id_group is None)):
                         geofence_triggered_message = geofence_triggered[1]
                         registration_token = self.postgres.get_registration_token_by_user_id(user_id)
                         response = self.firebase_sdk.send_notification("ios", registration_token,
@@ -231,6 +240,7 @@ class User:
                 self.save_current_activity_in_session(session_id, message["activity"])
                 self.save_last_message_in_session(session_id, message)
                 self.update_session_datetime(message["session_id"])
+
                 return {
                     "result": True,
                     "message": "Position successfully inserted.",
