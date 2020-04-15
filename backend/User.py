@@ -126,6 +126,32 @@ class User:
 
         return False
 
+    # Ritorna se il geofence corrente è già stato triggerato
+    def get_current_geofence_is_already_triggered_in_session(self, session_id):
+        for session in self.live_sessions:
+            if session["session_id"] == session_id:
+                return session["current_geofence_is_already_triggered"]
+
+        return False
+
+    # Ritorna l'id del gruppo che ha già triggerato il geofence
+    def get_current_geofence_triggered_by_group_id_in_session(self, session_id):
+        for session in self.live_sessions:
+            if session["session_id"] == session_id:
+                return session["current_geofence_triggered_by_group_id"]
+
+        return False
+
+    # Salva se il geofence corrente è stato triggerato
+    def save_current_geofence_is_already_triggered_in_session(self, session_id, group_id, is_already_triggered):
+        for session in self.live_sessions:
+            if session["session_id"] == session_id:
+                session["current_geofence_triggered_by_group_id"] = group_id
+                session["current_geofence_is_already_triggered"] = is_already_triggered
+                return True
+
+        return False
+
     # Registra una nuova sessione per uno specifico utente
     def register_new_session(self, user_id, old_position=[]):
         self.remove_session_by_user_id(user_id)
@@ -137,6 +163,8 @@ class User:
             "date_time": now,
             "current_activity": None,
             "current_id_geofence_triggered": None,
+            "current_geofence_is_already_triggered": False,
+            "current_geofence_triggered_by_group_id": None,
             "previous_position": old_position,
         }
         self.live_sessions.append(session)
@@ -226,7 +254,11 @@ class User:
                     else:
                         previous_position_id_group = None
 
-                    if previous_activity is None or message["activity"] != previous_activity or geofence_triggered_id != previous_id_geofence_triggered or (geofence_triggered_id == previous_id_geofence_triggered and (previous_position_id_group == message["position_id_group"] or previous_position_id_group is None)):
+                    current_geofence_is_already_triggered = self.get_current_geofence_is_already_triggered_in_session(session_id)
+                    current_geofence_triggered_by_group_id = self.get_current_geofence_triggered_by_group_id_in_session(session_id)
+
+                    if (previous_activity is None or message["activity"] != previous_activity or geofence_triggered_id != previous_id_geofence_triggered) or ((current_geofence_is_already_triggered and current_geofence_triggered_by_group_id == message["position_id_group"]) and (previous_position_id_group == message["position_id_group"] or previous_position_id_group is None)):
+                        self.save_current_geofence_is_already_triggered_in_session(session_id, message["position_id_group"], True)
                         geofence_triggered_message = geofence_triggered[1]
                         registration_token = self.postgres.get_registration_token_by_user_id(user_id)
                         response = self.firebase_sdk.send_notification("ios", registration_token,
@@ -236,6 +268,7 @@ class User:
                         self.postgres.update_id_geofence_triggered_position(position_id, geofence_triggered_id)
                 else:
                     self.save_current_geofence_triggered_in_session(session_id, None)
+                    self.save_current_geofence_is_already_triggered_in_session(session_id, message["position_id_group"], False)
 
                 self.save_current_activity_in_session(session_id, message["activity"])
                 self.save_last_message_in_session(session_id, message)
