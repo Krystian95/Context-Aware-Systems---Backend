@@ -55,9 +55,12 @@ class Postgres:
             self.connection.commit()
             last_position_id = self.cursor.fetchone()[0]
             print("Successfully created new position with id:", last_position_id)
+
+            # Aggiornamento dinamico dei dati
             query = "listen qgis; notify qgis, 'added_path';"
             self.cursor.execute(query)
             self.connection.commit()
+            
             return last_position_id
         except (Exception, psycopg2.Error) as error:
             print("Failed to insert record into position table:", error)
