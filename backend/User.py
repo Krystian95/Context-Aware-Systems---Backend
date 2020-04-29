@@ -8,9 +8,9 @@ class User:
     # Memorizza le sessioni attive
     live_sessions = []
     minutes_to_wait_before_generate_new_session = {
-        "walk": 2,
+        "walk": 6,
         "bike": 5,
-        "car": 10
+        "car": 4
     }
 
     def __init__(self, postgres, firebase_sdk):
